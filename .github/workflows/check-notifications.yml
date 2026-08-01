@@ -1,8 +1,11 @@
-name: Check new Coconala blogs
+name: Reliable Coconala blog notifications
 
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    # Start away from GitHub's busiest top-of-hour period. Two staggered
+    # schedules provide a replacement run if one scheduled event is delayed.
+    - cron: "17 * * * *"
+    - cron: "47 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -10,17 +13,43 @@ permissions:
 
 concurrency:
   group: niji-office-blog-check
-  cancel-in-progress: false
+  # Every scheduled run continues checking for 75 minutes. A newer run safely
+  # replaces the older run, so only one runner is active at a time.
+  cancel-in-progress: true
 
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 85
     steps:
-      - name: Check for a new blog and send push notifications
+      - name: Monitor for new blogs and send push notifications
         shell: bash
         run: |
-          response="$(curl --fail --silent --show-error --retry 3 \
-            'https://niji-office-blog-list.hidemiya.chatgpt.site/api/push/check')"
-          echo "$response"
-          printf '%s' "$response" | grep -q '"ok":true'
+          set -euo pipefail
+
+          # Scheduled runs cover 75 minutes in five-minute intervals. Manual
+          # runs stay one-shot so they finish quickly during maintenance.
+          if [[ "${{ github.event_name }}" == "schedule" ]]; then
+            iterations=16
+          else
+            iterations=1
+          fi
+
+          for ((attempt=1; attempt<=iterations; attempt++)); do
+            echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] check ${attempt}/${iterations}"
+            response="$(curl --fail --silent --show-error \
+              --retry 5 --retry-all-errors --retry-delay 3 \
+              --connect-timeout 15 --max-time 60 \
+              'https://niji-office-blog-list.hidemiya.chatgpt.site/api/push/check')"
+            echo "$response"
+
+            ok="$(jq -r '.ok // false' <<<"$response")"
+            if [[ "$ok" != "true" ]]; then
+              echo "Notification API did not return ok=true" >&2
+              exit 1
+            fi
+
+            if (( attempt < iterations )); then
+              sleep 300
+            fi
+          done
