@@ -11,6 +11,13 @@
 - 新しい起動が古い起動を安全に引き継ぐため、GitHubのcron遅延や一部スキップを補います。
 - API通信はタイムアウト・再試行・JSON結果検証を行い、異常時はActionsを失敗表示にします。
 
+## セキュリティ設定
+
+- GitHub Actionsは有効、外部Actionの利用は禁止（リポジトリ内のみ許可）
+- `GITHUB_TOKEN`の標準権限は読み取り専用
+- Pull Requestの承認権限は付与しない
+- ワークフロー内でも`contents: read`だけを明示
+
 対象API: https://niji-office-blog-list.hidemiya.chatgpt.site/api/push/check
 
 GitHubの仕様により、公開リポジトリで60日間活動がない場合はスケジュール実行が自動停止することがあります。その場合はワークフローを再有効化してください。
