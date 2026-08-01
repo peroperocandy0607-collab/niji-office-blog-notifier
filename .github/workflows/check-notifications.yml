@@ -7,6 +7,12 @@ on:
     - cron: "17 * * * *"
     - cron: "47 * * * *"
   workflow_dispatch:
+    inputs:
+      continuous:
+        description: "Run the five-minute monitor continuously for 75 minutes"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -29,7 +35,7 @@ jobs:
 
           # Scheduled runs cover 75 minutes in five-minute intervals. Manual
           # runs stay one-shot so they finish quickly during maintenance.
-          if [[ "${{ github.event_name }}" == "schedule" ]]; then
+          if [[ "${{ github.event_name == 'schedule' || inputs.continuous == true }}" == "true" ]]; then
             iterations=16
           else
             iterations=1
