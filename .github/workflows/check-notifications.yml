@@ -2,7 +2,7 @@ name: Check new Coconala blogs
 
 on:
   schedule:
-    - cron: "2/5 * * * *"
+    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 permissions:
