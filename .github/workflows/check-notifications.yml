@@ -18,7 +18,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: niji-office-blog-check
+  group: niji-office-blog-check-${{ (github.event_name == 'schedule' || inputs.continuous == true) && 'continuous' || 'manual' }}
   # Every scheduled run continues checking for 75 minutes. A newer run safely
   # replaces the older run, so only one runner is active at a time.
   cancel-in-progress: true
